@@ -51,7 +51,7 @@ Also, you'll need to integrate with **Spotify's API** for song search and playba
 
 1. **GitHub repo** with your code
 2. **Local setup instructions** in the README (we MUST to be able to run it)
-3. **3-5 minute video walkthrough** explaining your UI/UX decisions and technical approach (Loom or similar is fine)
+3. **3-5 minute video walkthrough** explaining your UI/UX decisions and technical approach (Loom or similar is fine. No need for multiple takes - this doesn't need to be polished)
 
 ## Time
 
