@@ -9,6 +9,9 @@ const app = express();
 const server = createServer(app);
 const prisma = new PrismaClient();
 
+// keyed by partyId so we can cancel if someone adds a song during the countdown
+const idleTimers = new Map<string, NodeJS.Timeout>();
+
 const io = new Server(server, {
   cors: {
     origin: "http://localhost:5173",
@@ -74,7 +77,6 @@ app.get("/parties/:partyId", async (req, res) => {
 });
 
 // POST /parties/:partyId/join
-// participant is created here, not on socket connect, so their id persists across refreshes
 app.post("/parties/:partyId/join", async (req, res) => {
   const { partyId } = req.params;
   const { name } = req.body;
@@ -98,7 +100,6 @@ app.post("/parties/:partyId/join", async (req, res) => {
 });
 
 // GET /search?q=<query>
-// proxied so itunes stays server-side and we control the shape of data the frontend receives
 app.get("/search", async (req, res) => {
   const query = req.query.q as string;
 
@@ -127,8 +128,271 @@ app.get("/search", async (req, res) => {
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
 
-  socket.on("disconnect", () => {
+  // party:join
+  socket.on("party:join", async ({ partyId, participantId }) => {
+    socket.join(partyId);
+
+    // store socketId to identify participant on disconnect
+    await prisma.participant.update({
+      where: { id: participantId },
+      data: { socketId: socket.id },
+    });
+
+    // send full party snapshot to socket
+    const party = await prisma.party.findUnique({
+      where: { id: partyId },
+      include: {
+        participants: true,
+        songs: { orderBy: { position: "asc" } },
+      },
+    });
+
+    socket.emit("party:state", { party });
+
+    // tell everyone new participant
+    const participant = party?.participants.find((p) => p.id === participantId);
+    socket.to(partyId).emit("participant:joined", { participant });
+  });
+
+  // playback:play
+  socket.on("playback:play", async ({ partyId, participantId }) => {
+    const party = await prisma.party.findUnique({ where: { id: partyId } });
+
+    if (!party || party.hostId !== participantId) return;
+
+    const nextSong = await prisma.song.findFirst({
+      where: { partyId, status: "queued" },
+      orderBy: { position: "asc" },
+    });
+
+    if (!nextSong) return;
+
+    const startTime = Date.now();
+
+    await prisma.song.update({
+      where: { id: nextSong.id },
+      data: { status: "playing", playedAt: new Date(startTime) },
+    });
+
+    // move party out of lobby on first play
+    if (party.status === "lobby") {
+      await prisma.party.update({
+        where: { id: partyId },
+        data: { status: "playing" },
+      });
+    }
+
+    io.to(partyId).emit("playback:started", {
+      song: { ...nextSong, status: "playing", playedAt: new Date(startTime) },
+      startTime,
+    });
+  });
+
+  // song:vote
+  socket.on("song:vote", async ({ songId, participantId, value }) => {
+    await prisma.vote.upsert({
+      where: { songId_participantId: { songId, participantId } },
+      update: { value },
+      create: { songId, participantId, value },
+    });
+  });
+
+  // playback:next
+  socket.on("playback:next", async ({ partyId, participantId }) => {
+    const party = await prisma.party.findUnique({ where: { id: partyId } });
+
+    if (!party || party.hostId !== participantId) return;
+
+    const currentSong = await prisma.song.findFirst({
+      where: { partyId, status: "playing" },
+      include: { votes: true },
+    });
+
+    if (!currentSong) return;
+
+    await prisma.song.update({
+      where: { id: currentSong.id },
+      data: { status: "played" },
+    });
+
+    // score = average of votes
+    const score =
+      currentSong.votes.length > 0
+        ? currentSong.votes.reduce((sum, v) => sum + v.value, 0) /
+          currentSong.votes.length
+        : 0;
+
+    io.to(partyId).emit("playback:reveal", {
+      songId: currentSong.id,
+      score,
+      votes: currentSong.votes,
+    });
+
+    // wait for reveal animation before advancing
+    setTimeout(async () => {
+      // re-fetch party in case host called party:end while the song was playing
+      const currentParty = await prisma.party.findUnique({ where: { id: partyId } });
+
+      if (currentParty?.status === "ending") {
+        // host signaled end during the song, close out now instead of advancing
+        await prisma.party.update({
+          where: { id: partyId },
+          data: { status: "ended" },
+        });
+
+        const playedSongs = await prisma.song.findMany({
+          where: { partyId, status: "played" },
+          include: { votes: true },
+        });
+
+        const results = playedSongs
+          .map((song) => ({
+            song,
+            score:
+              song.votes.length > 0
+                ? song.votes.reduce((sum, v) => sum + v.value, 0) / song.votes.length
+                : 0,
+          }))
+          .sort((a, b) => b.score - a.score);
+
+        io.to(partyId).emit("party:ended", { results });
+        return;
+      }
+
+      const nextSong = await prisma.song.findFirst({
+        where: { partyId, status: "queued" },
+        orderBy: { position: "asc" },
+      });
+
+      if (nextSong) {
+        const startTime = Date.now();
+        await prisma.song.update({
+          where: { id: nextSong.id },
+          data: { status: "playing", playedAt: new Date(startTime) },
+        });
+        io.to(partyId).emit("playback:started", {
+          song: { ...nextSong, status: "playing", playedAt: new Date(startTime) },
+          startTime,
+        });
+      } else {
+        // queue empty, start idle countdown
+        const timeoutAt = Date.now() + party.idleTimeout * 1000;
+        io.to(partyId).emit("queue:idle", { timeoutAt });
+
+        const timer = setTimeout(async () => {
+          await prisma.party.update({
+            where: { id: partyId },
+            data: { status: "ended" },
+          });
+
+          const playedSongs = await prisma.song.findMany({
+            where: { partyId, status: "played" },
+            include: { votes: true },
+          });
+
+          const results = playedSongs
+            .map((song) => ({
+              song,
+              score:
+                song.votes.length > 0
+                  ? song.votes.reduce((sum, v) => sum + v.value, 0) / song.votes.length
+                  : 0,
+            }))
+            .sort((a, b) => b.score - a.score);
+
+          io.to(partyId).emit("party:ended", { results });
+          idleTimers.delete(partyId);
+        }, party.idleTimeout * 1000);
+
+        idleTimers.set(partyId, timer);
+      }
+    }, 3000);
+  });
+
+  // song:add
+  socket.on("song:add", async ({ partyId, participantId, song }) => {
+    const queueLength = await prisma.song.count({
+      where: { partyId, status: "queued" },
+    });
+
+    const newSong = await prisma.song.create({
+      data: {
+        partyId,
+        addedByName:
+          (
+            await prisma.participant.findUnique({
+              where: { id: participantId },
+            })
+          )?.name ?? "unknown",
+        position: queueLength,
+        status: "queued",
+        ...song,
+      },
+    });
+
+    io.to(partyId).emit("song:added", { song: newSong });
+
+    // cancel idle countdown if running
+    if (idleTimers.has(partyId)) {
+      clearTimeout(idleTimers.get(partyId));
+      idleTimers.delete(partyId);
+      io.to(partyId).emit("queue:idle:cancel");
+
+      // auto-play new song since queue empty
+      const startTime = Date.now();
+      await prisma.song.update({
+        where: { id: newSong.id },
+        data: { status: "playing", playedAt: new Date(startTime) },
+      });
+      io.to(partyId).emit("playback:started", {
+        song: { ...newSong, status: "playing", playedAt: new Date(startTime) },
+        startTime,
+      });
+    }
+  });
+
+  // party:end
+  // flags the party as "ending" rather than ending immediately
+  // the party closes gracefully at the end of the current song via playback:next
+  socket.on("party:end", async ({ partyId, participantId }) => {
+    const party = await prisma.party.findUnique({ where: { id: partyId } });
+
+    if (!party || party.hostId !== participantId) return;
+
+    // cancel idle countdown if running since we're ending anyway
+    if (idleTimers.has(partyId)) {
+      clearTimeout(idleTimers.get(partyId));
+      idleTimers.delete(partyId);
+    }
+
+    await prisma.party.update({
+      where: { id: partyId },
+      data: { status: "ending" },
+    });
+
+    // tell the room the party is ending so the UI can show a "last song" indicator
+    io.to(partyId).emit("party:ending");
+  });
+
+  // disconnect
+  socket.on("disconnect", async () => {
     console.log("Client disconnected:", socket.id);
+
+    const participant = await prisma.participant.findFirst({
+      where: { socketId: socket.id },
+    });
+
+    if (!participant) return;
+
+    // mark socketId as offline
+    await prisma.participant.update({
+      where: { id: participant.id },
+      data: { socketId: null },
+    });
+
+    socket.to(participant.partyId).emit("participant:left", {
+      participantId: participant.id,
+    });
   });
 });
 
