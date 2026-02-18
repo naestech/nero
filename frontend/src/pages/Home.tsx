@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import JoinForm from "../components/JoinForm";
 
 function Home() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"join" | "create">("join");
+  const [code, setCode] = useState("");
 
   return (
     // toggle between join & create party
@@ -14,48 +16,18 @@ function Home() {
       </button>
 
       {mode === "join" ? (
-        <JoinForm navigate={navigate} />
+        <>
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="party code"
+          />
+          <JoinForm partyId={code} />
+        </>
       ) : (
         <CreateForm navigate={navigate} />
       )}
     </main>
-  );
-}
-
-// join party form
-function JoinForm({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const res = await fetch(`/api/parties/${code}/join`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
-    const { participant } = await res.json();
-    localStorage.setItem("participantId", participant.id);
-    navigate(`/party/${code}`);
-  }
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input
-        value={code}
-        onChange={(e) => setCode(e.target.value)}
-        placeholder="party code"
-      />
-      <input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="username"
-      />
-
-      <button type="submit" disabled={!code || !name}>
-        join
-      </button>
-    </form>
   );
 }
 
