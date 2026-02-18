@@ -1,5 +1,9 @@
+# provided
 node_modules/
 dist/
 .env
 *.db
 *.db-journal
+
+# *.md
+PLAN.md

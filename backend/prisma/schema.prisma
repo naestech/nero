@@ -8,3 +8,54 @@ datasource db {
 }
 
 // Design your schema here
+
+  model Party {
+    id           String        @id @default(cuid())
+    name         String
+    theme        String
+    status       String        @default("lobby")
+    hostId       String
+    createdAt    DateTime      @default(now())
+    idleTimeout  Int           @default(60)
+    participants Participant[]
+    songs        Song[]
+  }
+
+  model Participant {
+    id        String   @id @default(cuid())
+    partyId   String
+    name      String
+    isHost    Boolean  @default(false)
+    socketId  String?
+    joinedAt  DateTime @default(now())
+    party     Party    @relation(fields: [partyId], references: [id])
+    votes     Vote[]
+  }
+
+  model Song {
+    id         String    @id @default(cuid())
+    partyId    String
+    itunesId   String
+    title      String
+    artist     String
+    albumArt   String
+    previewUrl String
+    addedByName String
+    position   Int
+    status     String    @default("queued")
+    playedAt   DateTime?
+    party      Party     @relation(fields: [partyId], references: [id])
+    votes      Vote[]
+  }
+
+  model Vote {
+    id            String      @id @default(cuid())
+    songId        String
+    participantId String
+    value         Int
+    updatedAt     DateTime    @updatedAt
+    song          Song        @relation(fields: [songId], references: [id])
+    participant   Participant @relation(fields: [participantId], references: [id])
+
+    @@unique([songId, participantId])
+  }
