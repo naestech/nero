@@ -42,7 +42,7 @@ export function useParty(partyId: string, participantId: string | null) {
 
     // data: {songId, startTime}
     socket.on("playback:started", (data) => {
-      setCurrentSong(data);
+      setCurrentSong({ songId: data.song.id, startTime: data.startTime });
     });
 
     // data: {songId, score, votes}
