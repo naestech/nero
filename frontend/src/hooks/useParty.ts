@@ -40,12 +40,11 @@ export function useParty(partyId: string, participantId: string | null) {
       setSongs((prev) => [...prev, data.song]);
     });
 
-    // data: {songId, startTime}
     socket.on("playback:started", (data) => {
+      setReveal(null);
       setCurrentSong({ songId: data.song.id, startTime: data.startTime });
     });
 
-    // data: {songId, score, votes}
     socket.on("playback:reveal", (data) => {
       setReveal(data);
     });

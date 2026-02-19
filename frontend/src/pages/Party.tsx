@@ -5,6 +5,7 @@ import { socket } from "../lib/socket";
 import JoinForm from "../components/JoinForm";
 import NowPlaying from "../components/NowPlaying";
 import Queue from "../components/Queue";
+import ResultMeter from "../components/ResultMeter";
 
 function Party() {
   const { partyId } = useParams();
@@ -13,7 +14,7 @@ function Party() {
   );
   const [isPlaying, setIsPlaying] = useState(false);
   const [myVote, setMyVote] = useState<1 | -1 | null>(null);
-  const { party, participants, songs, currentSong } = useParty(
+  const { party, participants, songs, currentSong, reveal } = useParty(
     partyId!,
     participantId,
   );
@@ -60,6 +61,7 @@ function Party() {
           </button>
         </div>
       )}
+      {reveal && <ResultMeter votes={reveal.votes} />}
       {/* TODO: replace with final play button design */}
       {isHost && !isPlaying && (
         <button
