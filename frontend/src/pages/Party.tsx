@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useParty } from "../hooks/useParty";
 import { socket } from "../lib/socket";
@@ -12,10 +12,15 @@ function Party() {
     localStorage.getItem("participantId"),
   );
   const [isPlaying, setIsPlaying] = useState(false);
+  const [myVote, setMyVote] = useState<1 | -1 | null>(null);
   const { party, participants, songs, currentSong } = useParty(
     partyId!,
     participantId,
   );
+
+  useEffect(() => {
+    setMyVote(null);
+  }, [currentSong?.songId]);
 
   if (!participantId)
     return <JoinForm partyId={partyId!} onJoin={setParticipantId} />;
@@ -33,6 +38,28 @@ function Party() {
           <NowPlaying currentSong={currentSong} songs={songs} isHost={isHost} participantId={participantId} />
         )}
       </div>
+      {currentSong && (
+        <div>
+          <button
+            onClick={() => {
+              socket.emit("song:vote", { songId: currentSong.songId, participantId, value: 1 });
+              setMyVote(1);
+            }}
+            style={{ textDecoration: myVote === 1 ? "underline" : "none" }}
+          >
+            yes
+          </button>
+          <button
+            onClick={() => {
+              socket.emit("song:vote", { songId: currentSong.songId, participantId, value: -1 });
+              setMyVote(-1);
+            }}
+            style={{ textDecoration: myVote === -1 ? "underline" : "none" }}
+          >
+            no
+          </button>
+        </div>
+      )}
       {/* TODO: replace with final play button design */}
       {isHost && !isPlaying && (
         <button
