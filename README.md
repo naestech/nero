@@ -7,6 +7,8 @@
 
 **how nero party works**
 
+**demo video:** https://www.loom.com/share/87bb16e36a88426daea3448dd1683d71
+
 host creates an account with party name & theme. they can then invite anyone with the link to join. participants join by entering their username.
 
 anyone in the room can search for songs, add to the shared queue.
@@ -18,6 +20,8 @@ if no new songs are added to the queue in 60 seconds, the party auto-ends and th
 ---
 
 **getting started**
+
+**setup video:** https://www.loom.com/share/9e35b7fa210c4dea9e4a81fa62802e44
 
 requires node 18+ and npm.
 
