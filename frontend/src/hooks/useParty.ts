@@ -57,8 +57,9 @@ export function useParty(partyId: string, participantId: string | null) {
       setIdleTimeout(null);
     });
 
-    socket.on("party:ended", () => {
-      navigate(`/party/${partyId}/results`);
+    socket.on("party:ended", (data) => {
+      localStorage.setItem(`results:${partyId}`, JSON.stringify(data.results));
+      navigate(`/party/${partyId}/results`, { state: { results: data.results } });
     });
 
     return () => {
