@@ -12,6 +12,22 @@ const prisma = new PrismaClient();
 // keyed by partyId so we can cancel if someone adds a song during the countdown
 const idleTimers = new Map<string, NodeJS.Timeout>();
 
+function buildResults(playedSongs: any[]) {
+  return playedSongs
+    .map((song) => {
+      const yes = song.votes.filter((v: any) => v.value === 1).length;
+      const total = song.votes.length;
+      const yesPercent = total > 0 ? yes / total : 0;
+      return { song, yesPercent, total };
+    })
+    .sort((a, b) => {
+      // primary: yes% descending
+      if (b.yesPercent !== a.yesPercent) return b.yesPercent - a.yesPercent;
+      // tiebreaker: more votes wins
+      return b.total - a.total;
+    });
+}
+
 const io = new Server(server, {
   cors: {
     origin: "http://localhost:5173",
@@ -245,15 +261,7 @@ io.on("connection", (socket) => {
           include: { votes: true },
         });
 
-        const results = playedSongs
-          .map((song) => ({
-            song,
-            score:
-              song.votes.length > 0
-                ? song.votes.reduce((sum, v) => sum + v.value, 0) / song.votes.length
-                : 0,
-          }))
-          .sort((a, b) => b.score - a.score);
+        const results = buildResults(playedSongs);
 
         io.to(partyId).emit("party:ended", { results });
         return;

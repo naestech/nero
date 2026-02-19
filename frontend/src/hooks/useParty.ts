@@ -21,6 +21,8 @@ export function useParty(partyId: string, participantId: string | null) {
       setParty(data.party);
       setParticipants(data.party.participants);
       setSongs(data.party.songs);
+      // store theme so results page can read it on refresh
+      localStorage.setItem(`theme:${partyId}`, data.party.theme);
     });
 
     socket.on("participant:joined", (data) => {
@@ -43,6 +45,11 @@ export function useParty(partyId: string, participantId: string | null) {
     socket.on("playback:started", (data) => {
       setReveal(null);
       setCurrentSong({ songId: data.song.id, startTime: data.startTime });
+      setSongs((prev) => prev.map((s) => {
+        if (s.id === data.song.id) return { ...s, status: "playing" };
+        if (s.status === "playing") return { ...s, status: "played" };
+        return s;
+      }));
     });
 
     socket.on("playback:reveal", (data) => {
@@ -59,7 +66,8 @@ export function useParty(partyId: string, participantId: string | null) {
 
     socket.on("party:ended", (data) => {
       localStorage.setItem(`results:${partyId}`, JSON.stringify(data.results));
-      navigate(`/party/${partyId}/results`, { state: { results: data.results } });
+      const theme = localStorage.getItem(`theme:${partyId}`);
+      navigate(`/party/${partyId}/results`, { state: { results: data.results, theme } });
     });
 
     return () => {
