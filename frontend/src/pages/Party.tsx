@@ -14,14 +14,33 @@ function Party() {
   );
   const [isPlaying, setIsPlaying] = useState(false);
   const [myVote, setMyVote] = useState<1 | -1 | null>(null);
-  const { party, participants, songs, currentSong, reveal } = useParty(
+  const { party, participants, songs, currentSong, reveal, idleTimeout } = useParty(
     partyId!,
     participantId,
   );
+  const [countdown, setCountdown] = useState<string | null>(null);
 
   useEffect(() => {
     setMyVote(null);
   }, [currentSong?.songId]);
+
+  useEffect(() => {
+    if (!idleTimeout) {
+      setCountdown(null);
+      return;
+    }
+
+    function tick() {
+      const remaining = Math.max(0, idleTimeout! - Date.now());
+      const secs = Math.ceil(remaining / 1000);
+      const mins = Math.floor(secs / 60);
+      setCountdown(`${mins}:${String(secs % 60).padStart(2, "0")}`);
+    }
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [idleTimeout]);
 
   if (!participantId)
     return <JoinForm partyId={partyId!} onJoin={setParticipantId} />;
@@ -62,6 +81,7 @@ function Party() {
         </div>
       )}
       {reveal && <ResultMeter votes={reveal.votes} />}
+      {countdown && <p>party ends in {countdown}</p>}
       {/* TODO: replace with final play button design */}
       {isHost && !isPlaying && (
         <button
