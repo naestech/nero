@@ -1,9 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { socket } from "../lib/socket";
+import { CurrentSong, Song } from "../types";
 
-function NowPlaying({ currentSong, songs, isHost, participantId }) {
-  const audioRef = useRef(null);
+type Props = {
+  currentSong: CurrentSong;
+  songs: Song[];
+  isHost: boolean;
+  participantId: string;
+};
+
+function NowPlaying({ currentSong, songs, isHost, participantId }: Props) {
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [muted, setMuted] = useState(false);
   const song = songs.find((s) => s.id === currentSong.songId);
 
@@ -27,7 +35,7 @@ function NowPlaying({ currentSong, songs, isHost, participantId }) {
   }
 
   function handleEnded() {
-    if (isHost) socket.emit("playback:next", { partyId: song.partyId, participantId });
+    if (isHost) socket.emit("playback:next", { partyId: song?.partyId, participantId });
   }
 
   if (!song) return null;

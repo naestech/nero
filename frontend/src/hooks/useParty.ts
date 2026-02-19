@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { socket } from "../lib/socket";
+import { Party, Participant, Song, CurrentSong, Reveal } from "../types";
 
 export function useParty(partyId: string, participantId: string | null) {
   const navigate = useNavigate();
-  const [party, setParty] = useState(null);
-  const [participants, setParticipants] = useState([]);
-  const [songs, setSongs] = useState([]);
-  const [currentSong, setCurrentSong] = useState(null);
-  const [reveal, setReveal] = useState(null);
-  const [idleTimeout, setIdleTimeout] = useState(null);
+  const [party, setParty] = useState<Party | null>(null);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [currentSong, setCurrentSong] = useState<CurrentSong | null>(null);
+  const [reveal, setReveal] = useState<Reveal | null>(null);
+  const [idleTimeout, setIdleTimeout] = useState<number | null>(null);
 
   useEffect(() => {
     if (!participantId) return;

@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { Heart } from "lucide-react";
-import ResultMeter from "../components/ResultMeter";
+import { ResultEntry } from "../types";
 
 const PHASE_DELAYS = [2500, 3000, 3000, 4000];
 
 function PodiumColumn({ entry, rank, visible, className }: {
-  entry: any;
+  entry: ResultEntry;
   rank: number;
   visible: boolean;
   className?: string;
@@ -30,7 +30,7 @@ function Results() {
   const { state } = useLocation();
   const [phase, setPhase] = useState(0);
 
-  const results = state?.results ?? JSON.parse(localStorage.getItem(`results:${partyId}`) ?? "null");
+  const results: ResultEntry[] | null = state?.results ?? JSON.parse(localStorage.getItem(`results:${partyId}`) ?? "null");
   const theme = state?.theme ?? localStorage.getItem(`theme:${partyId}`);
 
   useEffect(() => {

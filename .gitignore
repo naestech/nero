@@ -8,6 +8,7 @@ dist/
 # *.md
 PLAN.md
 DESIGN.md
+SCRIPT.md
 
 # git
 .gitignore

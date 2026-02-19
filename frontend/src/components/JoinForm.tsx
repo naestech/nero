@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-function JoinForm({ partyId, onJoin }: { partyId: string; onJoin?: (id: string) => void }) {
+function JoinForm({
+  partyId,
+  onJoin,
+}: {
+  partyId: string;
+  onJoin?: (id: string) => void;
+}) {
   const navigate = useNavigate();
   const [name, setName] = useState("");
 
@@ -24,7 +30,6 @@ function JoinForm({ partyId, onJoin }: { partyId: string; onJoin?: (id: string) 
     }
   }
 
-  // renders just form fields — callers (Home, Party) provide their own card wrapper
   return (
     <form onSubmit={handleSubmit}>
       <input
@@ -35,7 +40,7 @@ function JoinForm({ partyId, onJoin }: { partyId: string; onJoin?: (id: string) 
       />
       <button
         type="submit"
-        disabled={!name}
+        disabled={!partyId.trim() || !name.trim()}
         className="w-full bg-white text-black rounded-full py-3 font-semibold text-sm hover:bg-[#e5e5e5] transition-colors disabled:opacity-30 disabled:cursor-not-allowed mt-1"
       >
         join

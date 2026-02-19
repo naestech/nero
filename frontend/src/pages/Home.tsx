@@ -3,8 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Dices } from "lucide-react";
 import JoinForm from "../components/JoinForm";
 
-const inputClass = "w-full bg-[#111] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white placeholder-[#444] outline-none focus:border-[#3a3a3a] text-sm mb-3";
-
 function Home() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"join" | "create">("join");
@@ -26,7 +24,7 @@ function Home() {
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="party code"
-              className={inputClass}
+              className="w-full bg-[#111] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white placeholder-[#444] outline-none focus:border-[#3a3a3a] text-sm mb-3"
             />
             <JoinForm partyId={code} onJoin={handleJoined} />
           </>
@@ -97,7 +95,7 @@ function CreateForm({ navigate }: { navigate: ReturnType<typeof useNavigate> }) 
         value={hostName}
         onChange={(e) => setHostName(e.target.value)}
         placeholder="username"
-        className={inputClass}
+        className="w-full bg-[#111] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white placeholder-[#444] outline-none focus:border-[#3a3a3a] text-sm mb-3"
       />
 
       <div className="border-t border-[#2a2a2a] mt-1 mb-4" />
@@ -106,7 +104,7 @@ function CreateForm({ navigate }: { navigate: ReturnType<typeof useNavigate> }) 
         value={partyName}
         onChange={(e) => setPartyName(e.target.value)}
         placeholder="party name"
-        className={inputClass}
+        className="w-full bg-[#111] border border-[#2a2a2a] rounded-xl px-4 py-3 text-white placeholder-[#444] outline-none focus:border-[#3a3a3a] text-sm mb-3"
       />
 
       <div className="flex items-center bg-[#111] border border-[#2a2a2a] rounded-xl mb-3 pr-3 focus-within:border-[#3a3a3a] transition-colors">
@@ -129,7 +127,7 @@ function CreateForm({ navigate }: { navigate: ReturnType<typeof useNavigate> }) 
 
       <button
         type="submit"
-        disabled={!hostName || !partyName || !theme}
+        disabled={!hostName.trim() || !partyName.trim() || !theme.trim()}
         className="w-full bg-white text-black rounded-full py-3 font-semibold text-sm hover:bg-[#e5e5e5] transition-colors disabled:opacity-30 disabled:cursor-not-allowed mt-1"
       >
         create

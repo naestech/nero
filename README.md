@@ -1,49 +1,39 @@
-# Nero Party
+<div align="center">
+  <p><strong>nero party</strong></p>
+  <p><em>themed listening parties.</em></p>
+</div>
 
-A listening party app where friends join, add songs, listen together, and crown a winning song.
+---
 
-## Getting Started
+**how nero party works**
 
-### Prerequisites
+host creates an account with party name & theme. they can then invite anyone with the link to join. participants join by entering their username.
 
-- Node.js 18+
-- npm or yarn
-- A music API for search/playback (your choice — see PROMPT.md)
+anyone in the room can search for songs, add to the shared queue.
 
-### Installation
+participants vote on each song based on theme, and results are revealed at the end of the song.
+
+if no new songs are added to the queue in 60 seconds, the party auto-ends and the party results are displayed.
+
+---
+
+**getting started**
+
+requires node 18+ and npm.
 
 ```bash
-# Install all dependencies
+git clone https://github.com/naestech/nero.git
+cd nero
 npm install
-
-# Set up environment variables (no API keys required by default)
-cp .env.example .env
-
-# Set up the database
-cd backend && npx prisma migrate dev && cd ..
-
-# Start the development servers
+cd backend && npx prisma migrate dev --name init && cd ..
 npm run dev
 ```
 
-This will start:
-- Backend on `http://localhost:3000`
-- Frontend on `http://localhost:5173`
+open `http://localhost:5173`
 
-## Project Structure
+---
 
-```
-nero-party/
-├── backend/          # Express + Socket.IO server
-│   ├── prisma/       # Database schema & migrations
-│   └── src/          # Server source code
-└── frontend/         # React + Vite client
-    └── src/          # Client source code
-```
-
-## Tech Stack
-
-- **Backend:** Express.js, Prisma, Socket.IO
-- **Frontend:** React, Vite, TailwindCSS
-- **Database:** SQLite (local)
-- **External API:** Music API of your choice (for song search and playback)
+**built with:**
+express · socket.io · prisma · sqlite
+react · vite · tailwindcss ·
+itunes search api _(no api key required!)_
